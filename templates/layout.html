@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang=ja>
+<head>
+  <title>{% block title %}{% endblock %}</title>
+  <meta charset="utf-8"/>
+  <link rel="stylesheet" href="{{url_for('static', filename='style.css')}}">
+</head>
+<body>
+  <h1>{% block headline %}{% endblock %}</h1>
+ 
+  {% block content %}{% endblock %}
+ 
+  <div class="footer">
+    {% block footer %}{% endblock %}
+  </div>
+</body>
+ 
+</html>
