@@ -4,24 +4,19 @@ app = Flask(__name__)
 import pickle
 import sklearn
 
-@app.route('/predict', methods=['GET','POST'])
+msg = 'コストパフォーマンスを予測したい宿泊プランの情報を入力して下さい'
+
+@app.route('/predict', methods = ['POST'])
 def predict():
-  if request.method == 'GET':
-   msg = 'コストパフォーマンスを予想したい宿泊プランの情報を入力して下さい'
-   return render_template('predict.html', title='Predict Page', message=msg)
-  
   if request.method == 'POST':
-    # reg = pickle.load(open('./model/trained_model.pkl', 'rb'))
     prefs = request.form.get('prefs')
     reg = pickle.load(open(f'./model/trained_model{prefs}.pkl', 'rb'))
     z = int(request.form['price'])
     x1 = request.form['bf']
     x2 = request.form['dinner']
     x3 = request.form['area']
-    
-
-
     roomtype = request.form.get('roomtype')
+
     if roomtype == 'a':
       x4 = 1
       x5 = 0
@@ -113,21 +108,22 @@ def predict():
       x11 = 0
       x12 = 1
  
-    x = [[int(x1), int(x2), int(x3), x4, x5, x6, x7 ,x8 ,x9 ,x10 ,x11 ,x12 ]]
+    x = [[int(x1), int(x2), int(x3), x4, x5, x6, x7 ,x8 ,x9 ,x10 ,x11 ,x12]]
     price = reg.predict(x)
     price = price[0][0]
     price = int(price)
     difference = z - price
+    
     if difference >= 0:
-      price = 'この宿泊プランは予想価格より{}円高いです。'.format(difference)
+      price = 'この宿泊プランは予想価格より{}円高いです'.format(difference)
     else:
       difference = abs(difference)
-      price = 'この宿泊プランは予想価格より{}円安いです。'.format(difference)
-    return render_template('predict.html', title='Predict Page', message=price, bf=x1, dinner=x2, area=x3, price=z)
+      price = 'この宿泊プランは予想価格より{}円安いです'.format(difference)
+    return render_template('index.html', title = '予測結果', message = price, area = x3, price = z)
   
 @app.route('/')
 def index():  
-  return render_template('predict.html')
+  return render_template('index.html', title = '入力画面', message = msg)
  
 if __name__ == '__main__':
-  app.run(host='localhost', debug=True)
+  app.run(host = 'localhost', debug = True)
