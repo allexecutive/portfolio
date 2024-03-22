@@ -14,7 +14,7 @@
   <ul>
     <li>
       <p>価格：
-        <input type="number" name="price" value="{{ price }}"  min="0">
+        <input type="number" name="price" value="{{ price }}"  min="0" required>
       </p>
     </li>
     <li>
@@ -87,7 +87,7 @@
     </li>
     <li>
       <p>朝食：
-        <input type="radio" name="bf" value="1" checked> あり
+        <input type="radio" name="bf" value="1" checked > あり
         <input type="radio" name="bf" value="0"> なし
       </p>
     </li>
@@ -99,7 +99,7 @@
     </li>
     <li>
       <p>面積（㎡）：
-        <input type="number" name="area" value="{{ area }}" min="0">
+        <input type="number" name="area" value="{{ area }}" min="0" required>
       </p>
     </li>
   </ul>
