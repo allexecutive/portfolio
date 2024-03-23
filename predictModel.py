@@ -17,7 +17,6 @@ url_tail = ['hokkaido/p{}','aomori/p{}','iwate/p{}','miyagi/p{}','akita/p{}','ya
             'kumamoto/p{}','oita/p{}','miyazaki/p{}','kagoshima/p{}','okinawa/p{}']
 price_url = "https://hotel.travel.rakuten.co.jp/hotelinfo/plan/{0}"
 
-
 # 文字列を正規化する
 def normalize_text(text):
     return unicodedata.normalize("NFKC", text)
@@ -32,17 +31,16 @@ def get_html(url):
 # 宿泊プランの情報を取得
 def get_plan_and_room(hotelId):
     soup = get_html(price_url.format(hotelId))
-
     all_data = []
 
-    # get plan list
+    # 宿泊プランを選択
     for plan in soup.findAll("li", {"class": "planThumb"})[:5]: # プランが多すぎる場合を考慮して5つまでに制御
 
-        # get room list
+        # 宿泊プランの詳細情報を取得
         for room in plan.findAll("li", {"class": "rm-type-wrapper"}):
             room_data = d.copy()
             roomInfo = room.find("dd", {"class": "htlPlnTypTxt"})
-            # room type
+            # ルームタイプを取得
             roomTypeInfo = roomInfo.find("span", {"data-locate": "roomType-Info"})
             
             try:
@@ -50,10 +48,10 @@ def get_plan_and_room(hotelId):
             except AttributeError:
                 room_data["ルームタイプ"]='なし'
 
-            # meal
+            # 朝夕食の有無を取得
             roomMealInfo = roomInfo.find("span", {"data-locate": "roomType-option-meal"})
             room_data["食事"] = normalize_text(roomMealInfo.getText().replace("食事", "").strip())
-            # area
+            # 部屋面積を取得
             room_data["面積"] = normalize_text(roomTypeInfo.getText().replace(room_data["ルームタイプ"], "").strip())
 
             for li in room.find("ul", {"class": "htlPlnRmTypPrc"}).findAll("li"):
@@ -63,8 +61,8 @@ def get_plan_and_room(hotelId):
                 all_data.append(row_data)
     return pd.DataFrame(all_data)
 
-
-for prefectureId in range(47):
+# 全国の予測モデルを作成
+for prefectureId in range(len(url_tail)):
     hotel_list_url = "https://search.travel.rakuten.co.jp/ds/yado/" + url_tail[prefectureId]
     all_data = []
     is_next_page_available = True
@@ -72,17 +70,17 @@ for prefectureId in range(47):
     
     # 次ページがなくなるまでループ
     while is_next_page_available:
-        # get html
+        # htmlを取得
         soup = get_html(hotel_list_url.format(page))
 
-        # extract hotels
+        # 宿泊施設のIDを取得
         for hotel in soup.find("ul", {"id": "htlBox"}).findAll("h1"):
             d = {}
             d["hotelId"] = re.findall(string=hotel.find("a").get("href"), pattern=r"HOTEL/([0-9]+)")[0]
             d['prefectureId'] = prefectureId
             all_data.append(d)
 
-        # check next page
+        # 次ページに移動
         if soup.find("li", {"class": "pagingBack"}):
             page+=1
             time.sleep(1) # サーバへの負荷を考慮して1秒待ってから次に進む
@@ -91,23 +89,20 @@ for prefectureId in range(47):
             
     df_hotel = pd.DataFrame(all_data)
     plan_room_data = []
-
+    # 宿泊プランの情報を取得
     for i in range(len(df_hotel)):
         print("{}/{}".format(i+1, len(df_hotel)))
         hotel_row = df_hotel.iloc[i]
         hotelId = hotel_row["hotelId"]
-        # price data
         df_plan_room = get_plan_and_room(hotelId)
         plan_room_data.append(df_plan_room)
         time.sleep(1)
         
     df_plan_room = pd.concat(plan_room_data, ignore_index=True)
-
-
     # 食事を朝食夕食の有無で分類
     df_plan_room["朝食"]=df_plan_room["食事"].str.contains('朝食あり').astype(int)
     df_plan_room["夕食"]=df_plan_room["食事"].str.contains('夕食あり').astype(int)
-    # 面積のみ抽出
+    # 文字列から面積のみ抽出
     m2_data=[]
     drop_index=[]
     area=df_plan_room['面積']
@@ -128,7 +123,7 @@ for prefectureId in range(47):
 
     m2=pd.DataFrame(m2_data)
     df_plan_room['平米']=m2
-    # プランの平均価格を抽出
+    # 文字列からプランの平均価格を抽出
     aveprice_data=[]
     price=df_plan_room['価格']
 
@@ -180,10 +175,10 @@ for prefectureId in range(47):
 
     # 不必要な列を削除
     if any(df_plan_room_all.columns=='なし'):
-        df_plan_room_part=df_plan_room_all.drop(['なし'], axis=1)
+        df_plan_room_all=df_plan_room_all.drop(['なし'], axis=1)
         
     if any(df_plan_room_all.columns=='洋室'):
-        df_plan_room_part=df_plan_room_all.drop(['洋室'], axis=1)
+        df_plan_room_all=df_plan_room_all.drop(['洋室'], axis=1)
         
     df_plan_room_part=df_plan_room_all.drop(['hotelId','prefectureId','ルームタイプ','食事','面積','人数','価格','その他'], axis=1)      
     # 欠損のあるデータを削除
@@ -200,7 +195,7 @@ for prefectureId in range(47):
     lower_price = np.percentile(df_plan_room_part["平均価格"], 1)
     upper_price = np.percentile(df_plan_room_part["平均価格"], 99)
     df_plan_room_part = df_plan_room_part[(df_plan_room_part["平均価格"]>=lower_price) & (df_plan_room_part["平均価格"]<=upper_price)] 
-
+    # 重回帰分析
     Y = df_plan_room_part[['平均価格']] # 目的変数を定義する
     X = df_plan_room_part.drop(['平均価格'], axis=1) # 説明変数を定義する
     reg = linear_model.LinearRegression() # モデルのクラスからモデルインスタンスを生成する
