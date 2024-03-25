@@ -155,49 +155,49 @@ for prefectureId in range(len(url_tail)):
 
     # ルームタイプをダミー変換
     room_type=pd.get_dummies(df_plan_room['ルームタイプ'])
-    df_plan_room_all= pd.concat([df_plan_room, room_type], axis=1)
+    df_plan_room= pd.concat([df_plan_room, room_type], axis=1)
 
     # ルームタイプの表記がないindexを抽出
-    if any(df_plan_room_all.columns=='なし'):
+    if any(df_plan_room.columns=='なし'):
         
         for i in range(len(df_plan_room)):
 
-            if df_plan_room_all['なし'][i]==1:
+            if df_plan_room['なし'][i]==1:
                 drop_index.append(i)
                 
     # 洋室というルームタイプのindexを抽出
-    if any(df_plan_room_all.columns=='洋室'):
+    if any(df_plan_room.columns=='洋室'):
         
         for i in range(len(df_plan_room)):
 
-            if df_plan_room_all['洋室'][i]==1:
+            if df_plan_room['洋室'][i]==1:
                 drop_index.append(i)
 
     # 不必要な列を削除
-    if any(df_plan_room_all.columns=='なし'):
-        df_plan_room_all=df_plan_room_all.drop(['なし'], axis=1)
+    if any(df_plan_room.columns=='なし'):
+        df_plan_room=df_plan_room_all.drop(['なし'], axis=1)
         
-    if any(df_plan_room_all.columns=='洋室'):
-        df_plan_room_all=df_plan_room_all.drop(['洋室'], axis=1)
+    if any(df_plan_room.columns=='洋室'):
+        df_plan_room=df_plan_room_all.drop(['洋室'], axis=1)
         
-    df_plan_room_part=df_plan_room_all.drop(['hotelId','prefectureId','ルームタイプ','食事','面積','人数','価格','その他'], axis=1)      
+    df_plan_room=df_plan_room.drop(['hotelId','prefectureId','ルームタイプ','食事','面積','人数','価格','その他'], axis=1)      
     # 欠損のあるデータを削除
     drop_index=list(set(drop_index))
-    df_plan_room_part.drop(drop_index,inplace=True)
-    df_plan_room_part.reset_index(inplace=True, drop=True)
+    df_plan_room.drop(drop_index,inplace=True)
+    df_plan_room.reset_index(inplace=True, drop=True)
     # データを保存
-    df_plan_room_part.to_csv(f'Part[{prefectureId}].csv')
+    df_plan_room.to_csv(f'Part[{prefectureId}].csv')
     # 平米の上下5%を外れ値として処理
-    lower_m2=np.percentile(df_plan_room_part["平米"].dropna(),5)
-    upper_m2=np.percentile(df_plan_room_part["平米"].dropna(),95)
-    df_plan_room_part = df_plan_room_part[(df_plan_room_part["平米"]>=lower_m2) & (df_plan_room_part["平米"]<=upper_m2)]
+    lower_m2=np.percentile(df_plan_room["平米"].dropna(),5)
+    upper_m2=np.percentile(df_plan_room["平米"].dropna(),95)
+    df_plan_room = df_plan_room[(df_plan_room["平米"]>=lower_m2) & (df_plan_room["平米"]<=upper_m2)]
     # 平均価格の上下1%を外れ値として処理
-    lower_price = np.percentile(df_plan_room_part["平均価格"], 1)
-    upper_price = np.percentile(df_plan_room_part["平均価格"], 99)
-    df_plan_room_part = df_plan_room_part[(df_plan_room_part["平均価格"]>=lower_price) & (df_plan_room_part["平均価格"]<=upper_price)] 
+    lower_price = np.percentile(df_plan_room["平均価格"], 1)
+    upper_price = np.percentile(df_plan_room["平均価格"], 99)
+    df_plan_room = df_plan_room[(df_plan_room["平均価格"]>=lower_price) & (df_plan_room["平均価格"]<=upper_price)] 
     # 重回帰分析
-    Y = df_plan_room_part[['平均価格']] # 目的変数を定義する
-    X = df_plan_room_part.drop(['平均価格'], axis=1) # 説明変数を定義する
+    Y = df_plan_room[['平均価格']] # 目的変数を定義する
+    X = df_plan_room.drop(['平均価格'], axis=1) # 説明変数を定義する
     reg = linear_model.LinearRegression() # モデルのクラスからモデルインスタンスを生成する
     reg.fit(X,Y) # 生成したインスタンスに目的変数と説明変数を指定する
     file = f'trained_model{prefectureId}.pkl' 
